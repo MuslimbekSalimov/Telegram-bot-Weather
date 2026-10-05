@@ -47,6 +47,26 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 dp = Dispatcher()
 
+async def safe_edit_weather_message(message: types.Message, text: str, image_url: str, reply_markup: types.InlineKeyboardMarkup):
+    """Xabar rasm bo'lsa rasmni va izohni, matn bo'lsa matnni xavfsiz tahrirlash."""
+    if message.photo:
+        try:
+            new_media = types.InputMediaPhoto(media=image_url, caption=text, parse_mode=ParseMode.HTML)
+            await message.edit_media(media=new_media, reply_markup=reply_markup)
+            return
+        except Exception:
+            try:
+                await message.edit_caption(caption=text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+                return
+            except Exception:
+                pass
+    else:
+        try:
+            await message.edit_text(text=text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+            return
+        except Exception:
+            pass
+
 @dp.message(CommandStart())
 async def handle_start(message: types.Message):
     """Foydalanuvchi /start bosganida ishga tushadi."""
@@ -56,19 +76,23 @@ async def handle_start(message: types.Message):
     lat, lon = PRESET_CITIES["Toshkent"]
     curr_data = await fetch_current_weather(lat, lon, "Toshkent")
     weather_text = format_current_weather(curr_data)
+    kb = get_weather_details_keyboard(lat, lon, "Toshkent", "current")
 
-    welcome_text = (
+    # Pastki asosiy tugmalar menyusi
+    await message.answer(
         f"👋 Assalomu alaykum, <b>{user_name}</b>!\n"
-        f"Ob-havo ma'lumotlari botiga xush kelibsiz! 🌤\n\n"
-        f"👇 <b>Bugungi Toshkent shahri ob-havosi:</b>\n\n"
-        f"{weather_text}\n\n"
-        f"💡 <i>Quyidagi tugmalar orqali viloyatlarni tanlashingiz, o'z joylashuvingizni yuborishingiz yoki istalgan shahar nomini (masalan: Samarqand, Parij, London) yozib yuborishingiz mumkin!</i>"
+        f"<b>Ob-havo Boti 🌤</b> ga xush kelibsiz!\n\n"
+        f"Pastdagi tugmalar orqali viloyatlarni tanlashingiz, GPS joylashuvingizni yuborishingiz yoki istalgan shahar nomini yozishingiz mumkin:",
+        reply_markup=get_main_reply_keyboard(),
+        parse_mode=ParseMode.HTML
     )
 
-    await message.answer(
-        text=welcome_text,
+    # Ob-havoni rasm bilan jo'natish
+    await message.answer_photo(
+        photo=curr_data.get("image_url"),
+        caption=weather_text,
         parse_mode=ParseMode.HTML,
-        reply_markup=get_main_reply_keyboard()
+        reply_markup=kb
     )
 
 @dp.message(Command("help"))
@@ -111,7 +135,12 @@ async def show_tashkent(message: types.Message):
     curr = await fetch_current_weather(lat, lon, "Toshkent")
     text = format_current_weather(curr)
     kb = get_weather_details_keyboard(lat, lon, "Toshkent", "current")
-    await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+    await message.answer_photo(
+        photo=curr.get("image_url"),
+        caption=text,
+        parse_mode=ParseMode.HTML,
+        reply_markup=kb
+    )
 
 @dp.callback_query(F.data.startswith("city:"))
 async def handle_city_callback(callback: types.CallbackQuery):
@@ -129,7 +158,12 @@ async def handle_city_callback(callback: types.CallbackQuery):
     text = format_current_weather(curr)
     kb = get_weather_details_keyboard(lat, lon, name, "current")
 
-    await callback.message.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+    await callback.message.answer_photo(
+        photo=curr.get("image_url"),
+        caption=text,
+        parse_mode=ParseMode.HTML,
+        reply_markup=kb
+    )
 
 @dp.callback_query(F.data == "list_cities")
 async def handle_list_cities_callback(callback: types.CallbackQuery):
@@ -152,11 +186,9 @@ async def handle_curr_callback(callback: types.CallbackQuery):
     curr = await fetch_current_weather(lat, lon, name)
     text = format_current_weather(curr)
     kb = get_weather_details_keyboard(lat, lon, name, "current")
+    image_url = curr.get("image_url")
 
-    try:
-        await callback.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
-    except TelegramBadRequest:
-        pass  # Xabar mazmuni o'zgarmagan bo'lsa xatolik bermaydi
+    await safe_edit_weather_message(callback.message, text, image_url, kb)
 
 @dp.callback_query(F.data.startswith("fc:"))
 async def handle_forecast_callback(callback: types.CallbackQuery):
@@ -170,11 +202,9 @@ async def handle_forecast_callback(callback: types.CallbackQuery):
     fc = await fetch_forecast(lat, lon, name)
     text = format_forecast(fc)
     kb = get_weather_details_keyboard(lat, lon, name, "forecast")
+    image_url = fc.get("image_url")
 
-    try:
-        await callback.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
-    except TelegramBadRequest:
-        pass
+    await safe_edit_weather_message(callback.message, text, image_url, kb)
 
 @dp.callback_query(F.data.startswith("aqi:"))
 async def handle_aqi_callback(callback: types.CallbackQuery):
@@ -188,11 +218,9 @@ async def handle_aqi_callback(callback: types.CallbackQuery):
     aq = await fetch_air_quality(lat, lon, name)
     text = format_air_quality(aq)
     kb = get_weather_details_keyboard(lat, lon, name, "aqi")
+    image_url = aq.get("image_url")
 
-    try:
-        await callback.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
-    except TelegramBadRequest:
-        pass
+    await safe_edit_weather_message(callback.message, text, image_url, kb)
 
 @dp.message(F.location)
 async def handle_location(message: types.Message):
@@ -204,7 +232,13 @@ async def handle_location(message: types.Message):
     curr = await fetch_current_weather(lat, lon, name)
     text = format_current_weather(curr)
     kb = get_weather_details_keyboard(lat, lon, name, "current")
-    await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+
+    await message.answer_photo(
+        photo=curr.get("image_url"),
+        caption=text,
+        parse_mode=ParseMode.HTML,
+        reply_markup=kb
+    )
 
 @dp.message(F.text)
 async def handle_city_search(message: types.Message):
@@ -226,7 +260,17 @@ async def handle_city_search(message: types.Message):
     text = format_current_weather(curr)
     kb = get_weather_details_keyboard(lat, lon, name, "current")
 
-    await status_msg.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+    try:
+        await status_msg.delete()
+    except Exception:
+        pass
+
+    await message.answer_photo(
+        photo=curr.get("image_url"),
+        caption=text,
+        parse_mode=ParseMode.HTML,
+        reply_markup=kb
+    )
 
 async def start_web_server():
     """Render.com bepul Web Service port tekshiruvi (Health Check) uchun web server."""

@@ -28,6 +28,39 @@ WEATHER_CODES = {
     99: "Kuchli momaqaldiroq va yirik do'l ⛈🧊"
 }
 
+WEATHER_IMAGES = {
+    "sunny": "https://images.unsplash.com/photo-1601297183305-6df142704ea2?w=800&q=80",
+    "partly_cloudy": "https://images.unsplash.com/photo-1594156596782-656c93e4d504?w=800&q=80",
+    "cloudy": "https://images.unsplash.com/photo-1534088568595-a066f410bcda?w=800&q=80",
+    "fog": "https://images.unsplash.com/photo-1487621167305-5d248087c724?w=800&q=80",
+    "rain": "https://images.unsplash.com/photo-1519692933481-e162a57d6721?w=800&q=80",
+    "heavy_rain": "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=800&q=80",
+    "snow": "https://images.unsplash.com/photo-1483921020237-2ff51e8e4b22?w=800&q=80",
+    "thunderstorm": "https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?w=800&q=80",
+    "forecast": "https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?w=800&q=80",
+    "aqi": "https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?w=800&q=80"
+}
+
+def get_weather_image(code: int) -> str:
+    """Ob-havo holatiga mos yuqori sifatli rasm URL'i"""
+    if code in (0, 1):
+        return WEATHER_IMAGES["sunny"]
+    elif code == 2:
+        return WEATHER_IMAGES["partly_cloudy"]
+    elif code == 3:
+        return WEATHER_IMAGES["cloudy"]
+    elif code in (45, 48):
+        return WEATHER_IMAGES["fog"]
+    elif code in (51, 53, 55, 61, 80):
+        return WEATHER_IMAGES["rain"]
+    elif code in (63, 65, 81, 82):
+        return WEATHER_IMAGES["heavy_rain"]
+    elif code in (71, 73, 75, 77, 85, 86):
+        return WEATHER_IMAGES["snow"]
+    elif code in (95, 96, 99):
+        return WEATHER_IMAGES["thunderstorm"]
+    return WEATHER_IMAGES["partly_cloudy"]
+
 PRESET_CITIES = {
     "Toshkent": (41.2995, 69.2401),
     "Samarqand": (39.6542, 66.9597),
@@ -70,6 +103,7 @@ async def fetch_current_weather(lat: float, lon: float, location_name: str) -> d
                 "wind": curr.get("wind_speed_10m"),
                 "pressure": curr.get("surface_pressure"),
                 "desc": WEATHER_CODES.get(code, "Ochiq havo"),
+                "image_url": get_weather_image(code),
                 "time": curr.get("time")
             }
 
@@ -117,7 +151,8 @@ async def fetch_forecast(lat: float, lon: float, location_name: str) -> dict:
                 "name": location_name,
                 "lat": lat,
                 "lon": lon,
-                "days": days
+                "days": days,
+                "image_url": WEATHER_IMAGES["forecast"]
             }
 
 async def fetch_air_quality(lat: float, lon: float, location_name: str) -> dict:
@@ -161,7 +196,8 @@ async def fetch_air_quality(lat: float, lon: float, location_name: str) -> dict:
                 "pm2_5": pm2_5,
                 "pm10": pm10,
                 "status": status,
-                "recommendation": recommendation
+                "recommendation": recommendation,
+                "image_url": WEATHER_IMAGES["aqi"]
             }
 
 async def search_city_coords(city_name: str):
