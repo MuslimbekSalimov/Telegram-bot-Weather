@@ -17,12 +17,23 @@ def get_main_reply_keyboard() -> ReplyKeyboardMarkup:
                 KeyboardButton(text="🇺🇿 Toshkent")
             ],
             [
-                KeyboardButton(text="ℹ️ Yordam")
+                KeyboardButton(text="ℹ️ Yordam"),
+                KeyboardButton(text="👤 Admin & Reklama")
             ]
         ],
         resize_keyboard=True
     )
     return keyboard
+
+def get_admin_inline_keyboard() -> InlineKeyboardMarkup:
+    """Admin bilan to'g'ridan-to'g'ri bog'lanish tugmasi."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="💬 Admin bilan bog'lanish", url="https://t.me/salimovv_m")
+            ]
+        ]
+    )
 
 def get_cities_inline_keyboard() -> InlineKeyboardMarkup:
     """O'zbekiston viloyatlari uchun inline tugmalar to'plami."""

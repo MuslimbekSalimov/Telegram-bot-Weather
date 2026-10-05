@@ -30,7 +30,8 @@ from weather_service import (
 from keyboards import (
     get_main_reply_keyboard,
     get_cities_inline_keyboard,
-    get_weather_details_keyboard
+    get_weather_details_keyboard,
+    get_admin_inline_keyboard
 )
 
 # Windows konsolida emojilar va xabarlar to'g'ri chiqishi uchun
@@ -80,6 +81,18 @@ async def handle_help(message: types.Message):
         "4️⃣ <b>📅 3 kunlik prognoz va 💨 Havo sifati (AQI):</b> Har bir ob-havo ma'lumoti ostidagi tugmalar orqali ko'p kunlik prognoz va havodagi chang miqdorini ko'rishingiz mumkin."
     )
     await message.answer(help_text, parse_mode=ParseMode.HTML)
+
+@dp.message(Command("admin"))
+@dp.message(F.text == "👤 Admin & Reklama")
+async def handle_admin(message: types.Message):
+    """Admin va reklama bilan bog'lanish bo'limi."""
+    admin_text = (
+        "👤 <b>Admin bilan bog'lanish va reklama:</b>\n\n"
+        "Bot bo'yicha takliflar, hamkorlik yoki reklama joylashtirish masalalari bo'yicha adminga murojaat qilishingiz mumkin:\n\n"
+        "👉 <b>Admin:</b> @salimovv_m\n\n"
+        "<i>Xabaringizni to'g'ridan-to'g'ri yozib qoldirishingiz mumkin.</i>"
+    )
+    await message.answer(admin_text, parse_mode=ParseMode.HTML, reply_markup=get_admin_inline_keyboard())
 
 @dp.message(F.text == "🏙 Viloyatlar bo'yicha")
 async def show_cities(message: types.Message):
