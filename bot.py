@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import os
 import socket
 import sys
+from aiohttp import web
 
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.enums import ParseMode
@@ -226,8 +228,32 @@ async def handle_city_search(message: types.Message):
 
     await status_msg.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
 
+async def start_web_server():
+    """Render.com bepul Web Service port tekshiruvi (Health Check) uchun web server."""
+    port = int(os.environ.get("PORT", 10000))
+    app = web.Application()
+
+    async def health_check(request):
+        return web.Response(text="Telegram Weather Bot is Live 24/7! 🌤")
+
+    app.router.add_get("/", health_check)
+    app.router.add_get("/health", health_check)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logging.info(f"Render port binding server {port}-portda faollashtirildi.")
+
 async def main():
     check_token()
+    
+    # Render.com port-binding serverini ishga tushirish (Deploy muvaffaqiyatli bo'lishi uchun)
+    try:
+        await start_web_server()
+    except Exception as e:
+        logging.warning(f"Web serverni ishga tushirishda ogohlantirish: {e}")
+
     session = IPv4AiohttpSession(timeout=60.0)
     bot = Bot(
         token=BOT_TOKEN,
